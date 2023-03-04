@@ -34,4 +34,8 @@ module {
     public type RistrettoPoint = {
         ep : ExtendedPoint;
     };
+    public type Record = {
+        key : Point;
+        value : [ExtendedPoint];
+    };
 }

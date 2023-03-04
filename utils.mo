@@ -309,7 +309,7 @@ module Utils {
     // Math end
 
     // Little-endian SHA512 with modulo n
-    func modlLE(hash: [Nat8]): Int {
+    public func modlLE(hash: [Nat8]): Int {
         return mod(bytesToNumberLE(hash), ?CONST.CURVE.l);
     };
 
@@ -371,13 +371,13 @@ module Utils {
         return Array.freeze(bytesRet);
     };
 
-    func decodeScalar25519(n: Hex): Int {
+    public func decodeScalar25519(n: Hex): Int {
         // and, finally, decode as little-endian.
         // This means that the resulting integer is of the form 2 ^ 254 plus eight times a value between 0 and 2 ^ 251 - 1(inclusive).
         return bytesToNumberLE(adjustBytes25519(ensureBytes(n, ?32)));
     };
 
-    func checkPrivateKey(key: PrivKey) : [Nat8] {
+    public func checkPrivateKey(key: PrivKey) : [Nat8] {
         // Normalize bigint / number / string to [Nat8]
         let keyRet = switch key {
             case (#hex(kh)) ensureBytes(kh, null);
@@ -425,7 +425,7 @@ module Utils {
     * @param scalar by which the point would be multiplied
     * @returns new Point on Montgomery CONST.CURVE
     */
-    func montgomeryLadder(pointU: Int, scalar: Int): Int {
+    public func montgomeryLadder(pointU: Int, scalar: Int): Int {
         let { P } = CONST.CURVE;
         let u = normalizeScalar(pointU, P, null);
         // Section 5: Implementations MUST accept non-canonical values and process them as
@@ -481,11 +481,11 @@ module Utils {
         return mod(x_2 * xp2, null);
     };
 
-    func encodeUCoordinate(u: Int): [Nat8] {
+    public func encodeUCoordinate(u: Int): [Nat8] {
         return numberTo32BytesLE(mod(u, null));
     };
 
-    func decodeUCoordinate(uEnc: Hex): Int {
+    public func decodeUCoordinate(uEnc: Hex): Int {
         let u = Array.thaw<Nat8>(ensureBytes(uEnc, ?32));
         // Section 5: When receiving such an array, implementations of X25519
         // MUST mask the most significant bit in the final byte.
@@ -563,7 +563,7 @@ module Utils {
 
     let _sha512Sync: Sha512FnSync = #function sha512;
 
-    func sha512s(messages : [[Nat8]]) : [Nat8] {
+    public func sha512s(messages : [[Nat8]]) : [Nat8] {
         // if (typeof _sha512Sync !== 'function')
         //     throw new Error('utils.sha512Sync must be set to use sync methods');
         switch _sha512Sync {
