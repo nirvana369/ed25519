@@ -38,4 +38,8 @@ module {
         key : Point;
         value : [ExtendedPoint];
     };
+
+    public type Generator<T> = {
+      next : () -> T;
+    };
 }

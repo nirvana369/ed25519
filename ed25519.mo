@@ -1,16 +1,16 @@
 import T "types";
+import S "cache";
 import CONST "const";
 import Utils "utils";
-import S "cache";
+
 import Array "mo:base/Array";
 import Option "mo:base/Option";
 import Debug "mo:base/Debug";
-import Int8 "mo:base/Int8";
 import Buffer "mo:base/Buffer";
+import Int8 "mo:base/Int8";
 import Int "mo:base/Int";
 
 module C_Point {
-
 
     // Base point aka generator
     // public_key = Point.BASE * private_key
@@ -415,6 +415,11 @@ module C_ExtendedPoint {
                 if (wbits == 0) {
                     // The most important part for let-time getPublicKey
                     // warning ! use Int.abs()
+                    if (Int.abs(offset1) < 0 or Int.abs(offset2) < 0) {
+                        Debug.trap("offset < 0");
+                    } else if (Int.abs(offset1) >= Array.size(precomputes) or Int.abs(offset2) >= Array.size(precomputes)) {
+                        Debug.trap("offset > 0");
+                    };
                     f := f.add(constTimeNegate(cond1, precomputes[Int.abs(offset1)]));
                 } else {
                     p := p.add(constTimeNegate(cond2, precomputes[Int.abs(offset2)]));

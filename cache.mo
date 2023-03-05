@@ -1,9 +1,7 @@
-import HashMap "mo:base/HashMap";
-import Hash "mo:base/Hash";
 import T "types";
+
+import Hash "mo:base/Hash";
 import Buffer "mo:base/Buffer";
-import Text "mo:base/Text";
-import Int "mo:base/Int";
  
 module {
 

@@ -1,3 +1,8 @@
+import T "types";
+import CONST "const";
+import FBlob "blob";
+import Crypto "crypto";
+
 import Int8 "mo:base/Int8";
 import Int32 "mo:base/Int32";
 import Int64 "mo:base/Int64";
@@ -15,8 +20,8 @@ import HashMap "mo:base/HashMap";
 import Hash "mo:base/Hash";
 import Debug "mo:base/Debug";
 import Buffer "mo:base/Buffer";
-import T "types";
-import CONST "const";
+import Time "mo:base/Time";
+import Blob "mo:base/Blob";
 
 module Utils {
     type Hex = T.Hex;
@@ -135,7 +140,12 @@ module Utils {
     func numberTo32BytesBE(num: Int) : [Nat8] {
         let length = 32;
         let hex = int2Hex(num);
-        return hexToBytes(hex);
+        var ret = hex;
+        //  add padding 0
+        Iter.iterate<Nat>(Iter.range(1, length * 2 - hex.size()), func(x, _index) {
+            ret := "0" # ret;
+        });
+        return hexToBytes(ret);
     };
 
     public func numberTo32BytesLE(num: Int) : [Nat8] {
@@ -523,37 +533,42 @@ module Utils {
         return mod(bytesToNumberLE(h), ?(CONST.CURVE.l - CONST._1n)) + CONST._1n;
     };
 
+    func createGenerator(): T.Generator<Nat> {
+      let seed: Nat = Int.abs(Time.now());
+      let prime = 456209410580464648418198177201;
+      let prime2 = 4451889979529614097557895687536048212109;
+      var prev = seed;
+      {
+        next = func(): Nat {
+          let cur = (prev * prime + 5) % prime2;
+          prev := cur;
+          cur;
+        };
+      };
+    };
+
     func randomBytes(blength: ?Nat): [Nat8] {
-        // let bytesLength = if (blength == null) 32 else Option.unwrap(blength);
-        // if (crypto.web) {
-        //     return crypto.web.getRandomValues(new [Nat8](bytesLength));
-        // } else if (crypto.node) {
-        //     const { randomBytes } = crypto.node;
-        //     return new [Nat8](randomBytes(bytesLength).buffer);
-        // } else {
-        //     Debug.trap("The environment doesn't have randomBytes function");
-        // }
-        return [];
+        let bytesLength = switch blength {
+          case null 32;
+          case (?l) l;
+        };
+        let gen = createGenerator();
+        let blob = FBlob.FBlob(gen);
+        let b = blob.random(bytesLength);
+        Blob.toArray(b);
     };
     /**
     * ed25519 private keys are uniform 32-bit strings. We do not need to check for
     * modulo bias like we do in noble-secp256k1 randomPrivateKey()
     */
-    func randomPrivateKey(): [Nat8] {
+    public func randomPrivateKey(): [Nat8] {
         return randomBytes(?32);
     };
     /** Shortcut method that calls native async implementation of sha512 */
     public func sha512(messages: [[Nat8]]): [Nat8] {
-        // const message = concatBytes(messages);
-        // if (crypto.web) {
-        //     const buffer = await crypto.web.subtle.digest('SHA-512', message.buffer);
-        //     return new [Nat8](buffer);
-        // } else if (crypto.node) {
-        //     return [Nat8].from(crypto.node.createHash('sha512').update(message).digest());
-        // } else {
-        //     throw new Error("The environment doesn't have sha512 function");
-        // }
-        return [];
+        let message = concatBytes(messages);
+        let b = Crypto.fromIter(#sha512, Iter.fromArray(message));
+        return Blob.toArray(b);
     };
 
     type Sha512FnSync = {
