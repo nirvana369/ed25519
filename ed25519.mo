@@ -8,22 +8,29 @@ import Option "mo:base/Option";
 import Debug "mo:base/Debug";
 import Buffer "mo:base/Buffer";
 import Int8 "mo:base/Int8";
+import Int16 "mo:base/Int16";
 import Int "mo:base/Int";
+import Nat8 "mo:base/Nat8";
+import Nat16 "mo:base/Nat16";
+import {log} "logger";
 
 module C_Point {
 
     // Base point aka generator
     // public_key = Point.BASE * private_key
-    public let BASE: T.Point = { x = CONST.CURVE.Gx; y = CONST.CURVE.Gy; windowSize = ?2};
+    public let BASE: T.Point = { x = CONST.CURVE.Gx; y = CONST.CURVE.Gy; windowSize = ?8};
     // Identity point aka point at infinity
     // point = point + zero_point
-    public let ZERO: T.Point = { x =CONST._0n; y = CONST._1n; windowSize = ?2};
+    public let ZERO: T.Point = { x =CONST._0n; y = CONST._1n; windowSize = ?8};
 
     public func getBase() : Point {
-        return Point(CONST.CURVE.Gx, CONST.CURVE.Gy);
+        let p = Point(CONST.CURVE.Gx, CONST.CURVE.Gy);
+        p;
     };
+
     public func getZero() : Point {
-        return Point(CONST._0n, CONST._1n);
+        let p = Point(CONST._0n, CONST._1n);
+        p;
     };
 
     // Converts hash string or Uint8Array to Point.
@@ -41,7 +48,7 @@ module C_Point {
         // y-coordinate is recovered simply by clearing this bit.  If the
         // resulting value is >= p, decoding fails.
         let normed = Array.thaw<Nat8>(hex);
-        normed[31] := Int8.toNat8(Int8.fromNat8(hex[31]) & Int8.fromIntWrap(-129)); // not(0x80) = -129
+        normed[31] := Nat8.fromIntWrap(Int16.toInt(Int16.fromNat16(Nat16.fromNat(Nat8.toNat(hex[31]))) & Int16.fromIntWrap(-129))); // not(0x80) = -129
         let y = Utils.bytesToNumberLE(Array.freeze(normed));
 
         if (strictMode and y >= P) Debug.trap("Expected 0 < hex < P");
@@ -68,14 +75,6 @@ module C_Point {
         };
         return Point(x, y);
     };
-        
-    public func mapPoint2TPoint(p : Point) : T.Point {
-        return {
-                    x = p.x;
-                    y = p.y;
-                    windowSize = p.getWindowSize();
-                };
-    };
 
     public func mapTPoint2Point(p : T.Point) : Point {
         let point = C_Point.Point(p.x, p.y);
@@ -90,7 +89,7 @@ module C_Point {
         // We calculate precomputes for elliptic CONST.CURVE point multiplication
         // using windowed method. This specifies window size and
         // stores precomputed values. Usually only base point would be precomputed.
-        var _WINDOW_SIZE: ?Nat = ?2;
+        var _WINDOW_SIZE: ?Nat = ?8;
 
         // // "Private method", don't use it directly.
         public func _setWindowSize(windowSize: ?Nat) {
@@ -101,7 +100,7 @@ module C_Point {
             return _WINDOW_SIZE;
         };
 
-        public func getPoint() : T.Point {
+        public func get() : T.Point {
             return {
                 x = x;
                 y = y;
@@ -206,7 +205,7 @@ module C_ExtendedPoint {
     };
 
     public func maplPoint2lTExPoint(lep : [ExtendedPoint]) : [T.ExtendedPoint] {
-        Array.map<ExtendedPoint, T.ExtendedPoint>(lep, func a = {x=a.x;y=a.y;z=a.z;t=a.t;});
+        Array.map<ExtendedPoint, T.ExtendedPoint>(lep, func a = a.get());
     };
 
     public func maplTExPoint2lPoint(lep : [T.ExtendedPoint]) : [ExtendedPoint] {
@@ -214,7 +213,7 @@ module C_ExtendedPoint {
     };
 
     public func mapPoint2TRecord(p : C_Point.Point, lep : [ExtendedPoint]) : T.Record {
-        let k = C_Point.mapPoint2TPoint(p);
+        let k = p.get();
         let v = maplPoint2lTExPoint(lep);
         return {
             key = k;
@@ -235,8 +234,6 @@ module C_ExtendedPoint {
         public let z = zP;
         public let t = tP;
         
-        var preprocess : [T.Record] = [];
-
         public func get() : T.ExtendedPoint {
             return {
                 x = x;
@@ -368,17 +365,21 @@ module C_ExtendedPoint {
                 Debug.trap("Point#wNAF: Invalid precomputation window, must be power of 2");
             };
             
-            var precomputes = switch (S.get(preprocess, C_Point.mapPoint2TPoint(affinePoint))) {
-                case null {
-                    var lep = precomputeWindow(W);
-                    if (W != 1) {
-                        lep := normalizeZ(lep);
-                        preprocess := S.put(preprocess, C_Point.mapPoint2TPoint(affinePoint), maplPoint2lTExPoint(lep));
-                    };
-                    lep;
-                };
-                case (?r) maplTExPoint2lPoint(r.value);
-            };
+
+            // warning ! need pre calculate to faster
+            var precomputes = normalizeZ(precomputeWindow(W));
+
+            // var precomputes = switch (S.get(preprocess, C_Point.mapPoint2TPoint(affinePoint))) {
+            //     case null {
+            //         var lep = precomputeWindow(W);
+            //         if (W != 1) {
+            //             lep := normalizeZ(lep);
+            //             preprocess := S.put(preprocess, C_Point.mapPoint2TPoint(affinePoint), maplPoint2lTExPoint(lep));
+            //         };
+            //         lep;
+            //     };
+            //     case (?r) maplTExPoint2lPoint(r.value);
+            // };
 
             var p = getZero();
             var f = getBase();
@@ -675,15 +676,16 @@ module C_Signature {
     };
 
     public class Signature(r1: C_Point.Point, s1: Int) = this {
-        // assertValidity();
 
         public let r = r1;
         public let s = s1;
 
-        public func assertValidity() : () {
+        public func assertValidity() {
             // 0 <= s < l
             let s2 = Utils.normalizeScalar(s, CONST.CURVE.l, ?false);
         };
+
+        assertValidity();
 
         public func toRawBytes() : [Nat8] {
             let u8 = Buffer.Buffer<Nat8>(64);

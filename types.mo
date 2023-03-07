@@ -42,4 +42,11 @@ module {
     public type Generator<T> = {
       next : () -> T;
     };
+
+    public type Log = {
+        id : Nat;
+        action : Text;
+        data : Text;
+        time : Nat;
+    };
 }

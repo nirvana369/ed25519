@@ -1,4 +1,14 @@
 {
+  "canisters": {
+    "ed25519": {
+      "main": "test.mo",
+      "type": "motoko"
+    },
+    "logging": {
+      "main": "log.mo",
+      "type": "motoko"
+    }
+  },
     "defaults": {
       "build": {
         "packtool": ""
