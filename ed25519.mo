@@ -398,7 +398,7 @@ module C_ExtendedPoint {
                 var wbits = Utils.bitand(tmp, mask); //Number(n & mask);
 
                 // Shift number by W bits.
-                tmp := Utils.bitrightshift(n, Int.abs(shiftBy));// n >>= shiftBy;
+                tmp := Utils.bitrightshift(tmp, Int.abs(shiftBy));// n >>= shiftBy;
 
                 // If the bits are bigger than max size, we'll split those.
                 // +224 => 256 - 32
