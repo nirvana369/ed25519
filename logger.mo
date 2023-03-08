@@ -5,6 +5,8 @@ import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Buffer "mo:base/Buffer";
+import Text "mo:base/Text";
+
 
 module {
     public type Logger = actor {
@@ -23,35 +25,59 @@ module {
     };
 
     public class LogBuilder() {
-        var text : Text = "";
-        let sep = " | ";
+        let s = Buffer.Buffer<Text>(0);
 
-        func addSep() {
-            text := text # sep;
+        public func addText(t : Text) {
+            s.add(t);
         };
 
         public func addNat(n : Nat) {
-            text := text # Nat.toText(n);
-            addSep();
+            s.add(Nat.toText(n));
         };
 
         public func addNat8(n : Nat8) {
-            text := text # Nat8.toText(n);
-            addSep();
+            s.add(Nat8.toText(n));
         };
 
         public func addInt(n : Int) {
-            text := text # Int.toText(n);
-            addSep();
+            s.add(Int.toText(n));
         };
 
         public func addInt8(n : Int8) {
-            text := text # Int8.toText(n);
-            addSep();
+            s.add(Int8.toText(n));
+        };
+
+        public func addSep() {
+            s.add("***");
+        };
+
+        public func addBool(n : Bool) {
+            s.add(if (n) "true" else "false");
         };
 
         public func addArrayNat8(a : [Nat8]) {
-            text := text # Buffer.toText(Buffer.fromArray<Nat8>(a), Nat8.toText);
+            s.add(Buffer.toText(Buffer.fromArray<Nat8>(a), Nat8.toText));
+        };
+
+        public func addPoint(p : T.Point) {
+            let windowSize = switch (p.windowSize) {
+                case null "null";
+                case (?wds) Nat.toText(wds);
+            };
+            s.add("{x=" # Int.toText(p.x) # ";y=" # Int.toText(p.y) # ";windowSize=" # windowSize);
+        };
+
+        public func addExPoint(p : T.ExtendedPoint) {
+            s.add("{x=" # Int.toText(p.x) # ";y=" # Int.toText(p.y) # ";t=" # Int.toText(p.t) # ";z=" # Int.toText(p.z));
+        };
+
+
+        public func toString(sep : Text) : Text {
+            Text.join(sep, s.vals());
+        };
+
+        public func clear() {
+            s.clear();
         };
     };
 }

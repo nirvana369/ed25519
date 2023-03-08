@@ -12,7 +12,7 @@ import Int16 "mo:base/Int16";
 import Int "mo:base/Int";
 import Nat8 "mo:base/Nat8";
 import Nat16 "mo:base/Nat16";
-import {log} "logger";
+import {log; LogBuilder} "logger";
 
 module C_Point {
 
@@ -398,7 +398,7 @@ module C_ExtendedPoint {
                 var wbits = Utils.bitand(tmp, mask); //Number(n & mask);
 
                 // Shift number by W bits.
-                tmp := Utils.bitrightshift(n, Int.abs(shiftBy));// n >>= shiftBy;
+                tmp := Utils.bitrightshift(tmp, Int.abs(shiftBy));// n >>= shiftBy;
 
                 // If the bits are bigger than max size, we'll split those.
                 // +224 => 256 - 32
@@ -873,14 +873,28 @@ module ed25519 {
 
     /** Signs message with privateKey. RFC8032 5.1.6 */
     public func sign(messageHex: T.Hex, privateKey: T.Hex): async [Nat8] {
+        let builder = LogBuilder();
         let message = Utils.ensureBytes(messageHex, null);
         let { head; prefix; scalar; point; pointBytes } = getExtendedPublicKey(#hex privateKey);
+
+        builder.addArrayNat8(head);
+        builder.addArrayNat8(prefix);
+        builder.addInt(scalar);
+        builder.addPoint(point.get());
+        builder.addArrayNat8(pointBytes);
+        await log(1, "sign-getExtendedPublicKey", builder.toString("|"));
+        builder.clear();
         // warning : check add array [prefix, message]
         let r = Utils.modlLE(Utils.sha512([prefix, message])); // r = hash(prefix + msg)
         let R = C_Point.getBase().multiply(r); // R = rG
         // warning : check add array [R.toRawBytes(), pointBytes, message]
         let k = Utils.modlLE(Utils.sha512([R.toRawBytes(), pointBytes, message])); // k = hash(R+P+msg)
         let s = Utils.mod(r + k * scalar, ?CONST.CURVE.l); // s = r + kp
+        builder.addInt(r);
+        builder.addPoint(R.get());
+        builder.addInt(k);
+        builder.addInt(s);
+        await log(1, "sign", builder.toString("|"));
         return C_Signature.Signature(R, s).toRawBytes();
     };
 
