@@ -1,5 +1,4 @@
 import T "types";
-import S "cache";
 import CONST "const";
 import Utils "utils";
 
@@ -12,7 +11,7 @@ import Int16 "mo:base/Int16";
 import Int "mo:base/Int";
 import Nat8 "mo:base/Nat8";
 import Nat16 "mo:base/Nat16";
-import {log} "logger";
+
 
 module C_Point {
 

@@ -1,5 +1,5 @@
 import Queue "logqueue";
-import T "types";
+import T "./../types";
 
 import HashMap "mo:base/HashMap";
 import Nat "mo:base/Nat";

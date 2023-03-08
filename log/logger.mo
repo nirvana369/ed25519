@@ -1,4 +1,5 @@
-import T "types";
+import T "./../types";
+
 import Time "mo:base/Time";
 import Int8 "mo:base/Int8";
 import Int "mo:base/Int";

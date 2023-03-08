@@ -46,10 +46,4 @@ module {
     // (d-1)²
     public let D_MINUS_ONE_SQ : Int = 40440834346308536858101042469323190826248399146238708352240133220865137265952;
 
-  // // Base point aka generator
-    // // public_key = Point.BASE * private_key
-    // public let BASE: Point = Point(CONST.CURVE.Gx, CONST.CURVE.Gy);
-    // // Identity point aka point at infinity
-    // // point = point + zero_point
-    // public let ZERO: Point = Point(CONST._0n, CONST._1n);
 }

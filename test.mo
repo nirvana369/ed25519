@@ -1,11 +1,13 @@
 import Types "types";
-import FBlob "blob";
-import FNat8 "nat8";
+import FBlob "./generator/blob";
+import FNat8 "./generator/nat8";
+import {ed25519; C_Point} "ed25519";
+import utils "utils";
+
 import Int "mo:base/Int";
 import Time "mo:base/Time";
 import Blob "mo:base/Blob";
-import {ed25519; C_Point} "ed25519";
-import utils "utils";
+
 
 actor {
     func createGenerator(): Types.Generator<Nat> {

@@ -5,7 +5,7 @@
       "type": "motoko"
     },
     "logging": {
-      "main": "log.mo",
+      "main": "log/log.mo",
       "type": "motoko"
     }
   },

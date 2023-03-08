@@ -1,4 +1,4 @@
-import Types "types";
+import Types "./../types";
 import FNat8 "nat8";
 
 import Array "mo:base/Array";

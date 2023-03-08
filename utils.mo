@@ -1,7 +1,7 @@
 import T "types";
 import CONST "const";
-import FBlob "blob";
-import Crypto "crypto";
+import FBlob "./generator/blob";
+import Crypto "./crypto/crypto";
 
 import Int8 "mo:base/Int8";
 import Int32 "mo:base/Int32";
