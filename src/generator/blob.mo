@@ -1,5 +1,5 @@
 import Types "./../types";
-import FNat8 "nat8";
+import FNat8 "./nat8";
 
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";

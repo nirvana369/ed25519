@@ -1,4 +1,4 @@
-import Queue "logqueue";
+import Queue "./logqueue";
 import T "./../types";
 
 import HashMap "mo:base/HashMap";

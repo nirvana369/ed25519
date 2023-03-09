@@ -81,7 +81,6 @@ module Utils {
 
     public func bytesToHex(uint8a: [Nat8]): Text {
         // pre-caching improves the speed 6x
-        // if (!(uint8a instanceof [Nat8])) throw new Error('[Nat8] expected');
         let hexes = getHexes();
         let hex = Array.foldRight<Nat8, Text>(uint8a, "", 
                                             func(x, acc) = hexes[Nat8.toNat(x)] # acc);
@@ -89,7 +88,7 @@ module Utils {
     };
 
     // Caching slows it down 2-3x
-    func hexToBytes(hex: Text): [Nat8] {
+    public func hexToBytes(hex: Text): [Nat8] {
         var map = HashMap.HashMap<Nat, Nat8>(1, Nat.equal, Hash.hash);
         // '0': 48 -> 0; '9': 57 -> 9
         for (num in Iter.range(48, 57)) {
@@ -335,8 +334,6 @@ module Utils {
     };
 
     public func ensureBytes(hex: Hex, expectedLength: ?Nat): [Nat8] {
-        // [Nat8].from() instead of hash.slice() because node.js Buffer
-        // is instance of [Nat8], and its slice() creates **mutable** copy
         let bytes = switch hex {
             case (#array(h)) h;
             case (#string(h)) hexToBytes(h);
@@ -399,19 +396,6 @@ module Utils {
         };
         return keyRet;
     };
-    // function syncGuard() {
-    // }
-
-    // public let sync = {
-    // /** Convenience method that creates public key and other stuff. RFC8032 5.1.5 */
-    // getExtendedPublicKey = getExtendedPublicKeySync;
-    // /** Calculates ed25519 public key. RFC8032 5.1.5 */
-    // getPublicKey: getPublicKeySync,
-    // /** Signs message with privateKey. RFC8032 5.1.6 */
-    // sign: signSync,
-    // /** Verifies ed25519 signature against message and public key. */
-    // verify: verifySync,
-    // };
 
     // Enable precomputes. Slows down first publicKey computation by 20ms.
     // Point.BASE._setWindowSize(?8);
@@ -533,6 +517,9 @@ module Utils {
         return mod(bytesToNumberLE(h), ?(CONST.CURVE.l - CONST._1n)) + CONST._1n;
     };
 
+    /**
+    *  Generator func base on current Time
+    */
     func createGenerator(): T.Generator<Nat> {
       let seed: Nat = Int.abs(Time.now());
       let prime = 456209410580464648418198177201;
@@ -558,8 +545,7 @@ module Utils {
         Blob.toArray(b);
     };
     /**
-    * ed25519 private keys are uniform 32-bit strings. We do not need to check for
-    * modulo bias like we do in noble-secp256k1 randomPrivateKey()
+    * ed25519 private keys are uniform 32-bit strings.
     */
     public func randomPrivateKey(): [Nat8] {
         return randomBytes(?32);
@@ -579,8 +565,6 @@ module Utils {
     let _sha512Sync: Sha512FnSync = #function sha512;
 
     public func sha512s(messages : [[Nat8]]) : [Nat8] {
-        // if (typeof _sha512Sync !== 'function')
-        //     throw new Error('utils.sha512Sync must be set to use sync methods');
         switch _sha512Sync {
             case (#function(f)) f(messages);
             case (_) Debug.trap("utils.sha512Sync must be set to use sync methods");
@@ -689,6 +673,9 @@ module Utils {
         return -(num - 1);
     };
 
+    /**
+    *   Flip bit 0->1, 1->0
+    */
     func bitflip(bin : [Bool], reverse : Bool) : [Bool] {
         var bbuff = Buffer.fromArray<Bool>(bin);
         bbuff := Buffer.map<Bool, Bool>(bbuff, func (x) { not x });

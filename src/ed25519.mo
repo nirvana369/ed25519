@@ -187,7 +187,7 @@ module C_ExtendedPoint {
     };
 
     public func assertExtPoint(other: ExtendedPoint) {
-
+        Debug.trap("assertExtPoint not implemented!");
     };
 
     public func constTimeNegate(condition: Bool, item: ExtendedPoint) :  ExtendedPoint {
@@ -196,9 +196,6 @@ module C_ExtendedPoint {
     };
 
     public func fromAffine(p: C_Point.Point): ExtendedPoint {
-        // if (!(p instanceof Point)) {
-        // throw new TypeError('ExtendedPoint#fromAffine: expected Point');
-        // }
         if (C_Point.getZero().equals(p)) return getZero();
         return ExtendedPoint(p.x, p.y, CONST._1n, Utils.mod(p.x * p.y, null));
     };
@@ -252,13 +249,11 @@ module C_ExtendedPoint {
                 i += 1;
                 tmp;
             });
-            // return points.map((p, i) => p.toAffine(toInv[i]));
             return ret;
         };
 
         public func normalizeZ(points: [ExtendedPoint]): [ExtendedPoint] {
             return Array.map<C_Point.Point, ExtendedPoint>(toAffineBatch(points), func p = fromAffine(p));
-            // return toAffineBatch(points).map(this.fromAffine);
         };
 
         // Compare one point to another.
@@ -350,12 +345,10 @@ module C_ExtendedPoint {
         };
 
         private func wNAF(n: Int, affPoint: ?C_Point.Point): ExtendedPoint {
-            // let affinePoint : Point.Point = if ((affPoint == null) and this.equals(ExtendedPoint.BASE)) Point.BASE else Option.unwrap(affPoint);
             let affinePoint : C_Point.Point = switch affPoint {
                 case (?p) p;
                 case null C_Point.getBase();
             };
-            // let W = if (affinePoint != null) affinePoint.getWindowSize() else 1;
             let W = switch (affinePoint.getWindowSize()) {
                 case null 1;
                 case (?s) s;
@@ -506,6 +499,75 @@ module C_RistrettoPoint {
         return RistrettoPoint(C_ExtendedPoint.getBase());
     };
 
+    // Computes Elligator map for Ristretto
+    // https://ristretto.group/formulas/elligator.html
+    private func calcElligatorRistrettoMap(r0: Int): C_ExtendedPoint.ExtendedPoint {
+        let { d } = CONST.CURVE;
+        let r = Utils.mod(CONST.SQRT_M1 * r0 * r0, null); // 1
+        let Ns = Utils.mod((r + CONST._1n) * CONST.ONE_MINUS_D_SQ, null); // 2
+        var c : Int = -1; // 3
+        let D = Utils.mod((c - d * r) * Utils.mod(r + d, null), null); // 4
+        let { isValid = Ns_D_is_sq; x = s } = Utils.uvRatio(Ns, D); // 5
+        var s_ = Utils.mod(s * r0, null); // 6
+        if (Utils.edIsNegative(s_) == false) s_ := Utils.mod(-s_, null);
+        let s1 = if (Ns_D_is_sq == false) s_ else s; // 7
+        if (Ns_D_is_sq == false) c := r; // 8
+        let Nt = Utils.mod(c * (r - CONST._1n) * CONST.D_MINUS_ONE_SQ - D, null); // 9
+        let s2 = s1 * s1;
+        let W0 = Utils.mod((s1 + s1) * D, null); // 10
+        let W1 = Utils.mod(Nt * CONST.SQRT_AD_MINUS_ONE, null); // 11
+        let W2 = Utils.mod(CONST._1n - s2, null); // 12
+        let W3 = Utils.mod(CONST._1n + s2, null); // 13
+        return C_ExtendedPoint.ExtendedPoint(Utils.mod(W0 * W3, null), Utils.mod(W2 * W1, null), Utils.mod(W1 * W3, null), Utils.mod(W0 * W2, null));
+    };
+
+    /**
+    * Takes uniform output of 64-bit hash function like sha512 and converts it to `RistrettoPoint`.
+    * The hash-to-group operation applies Elligator twice and adds the results.
+    * **Note:** this is one-way map, there is no conversion from point to hash.
+    * https://ristretto.group/formulas/elligator.html
+    * @param hex 64-bit output of a hash function
+    */
+    public func hashToCurve(h: T.Hex): RistrettoPoint {
+        let hex = Utils.ensureBytes(h, ?64);
+        let (firstBytes, secondBytes) = Buffer.split<Nat8>(Buffer.fromArray<Nat8>(hex), 32);
+        let r1 = Utils.bytes255ToNumberLE(Buffer.toArray(firstBytes));
+        let R1 = calcElligatorRistrettoMap(r1);
+        let r2 = Utils.bytes255ToNumberLE(Buffer.toArray(secondBytes));
+        let R2 = calcElligatorRistrettoMap(r2);
+        return RistrettoPoint(R1.add(R2));
+    };
+
+    /**
+    * Converts ristretto-encoded string to ristretto point.
+    * https://ristretto.group/formulas/decoding.html
+    * @param hex Ristretto-encoded 32 bytes. Not every 32-byte string is valid ristretto encoding
+    */
+    public func fromHex(h: T.Hex): RistrettoPoint {
+        let hex = Utils.ensureBytes(h, ?32);
+        let { a; d } = CONST.CURVE;
+        let emsg = "RistrettoPoint.fromHex: the hex is not valid encoding of RistrettoPoint";
+        let s = Utils.bytes255ToNumberLE(hex);
+        // 1. Check that s_bytes is the canonical encoding of a field element, or else abort.
+        // 3. Check that s is non-negative, or else abort
+        if (Utils.equalBytes(Utils.numberTo32BytesLE(s), hex) or Utils.edIsNegative(s) == false) Debug.trap(emsg);
+        let s2 = Utils.mod(s * s, null);
+        let u1 = Utils.mod(CONST._1n + a * s2, null); // 4 (a is -1)
+        let u2 = Utils.mod(CONST._1n - a * s2, null); // 5
+        let u1_2 = Utils.mod(u1 * u1, null);
+        let u2_2 = Utils.mod(u2 * u2, null);
+        let v = Utils.mod(a * d * u1_2 - u2_2, null); // 6
+        let { isValid; x = I } = Utils.invertSqrt(Utils.mod(v * u2_2, null)); // 7
+        let Dx = Utils.mod(I * u2, null); // 8
+        let Dy = Utils.mod(I * Dx * v, null); // 9
+        var x = Utils.mod((s + s) * Dx, null); // 10
+        if (Utils.edIsNegative(x)) x := Utils.mod(-x, null); // 10
+        let y = Utils.mod(u1 * Dy, null); // 11
+        let t = Utils.mod(x * y, null); // 12
+        if (isValid == false or Utils.edIsNegative(t) or y == CONST._0n) Debug.trap(emsg);
+        return RistrettoPoint(C_ExtendedPoint.ExtendedPoint(x, y, CONST._1n, t));
+    };
+
     public class RistrettoPoint(epParams: C_ExtendedPoint.ExtendedPoint) = this {
         // Private property to discourage combining ExtendedPoint + RistrettoPoint
         // Always use Ristretto encoding/decoding instead.
@@ -515,74 +577,6 @@ module C_RistrettoPoint {
             return {
                 ep = ep;
             };
-        };
-        // Computes Elligator map for Ristretto
-        // https://ristretto.group/formulas/elligator.html
-        private func calcElligatorRistrettoMap(r0: Int): C_ExtendedPoint.ExtendedPoint {
-            let { d } = CONST.CURVE;
-            let r = Utils.mod(CONST.SQRT_M1 * r0 * r0, null); // 1
-            let Ns = Utils.mod((r + CONST._1n) * CONST.ONE_MINUS_D_SQ, null); // 2
-            var c : Int = -1; // 3
-            let D = Utils.mod((c - d * r) * Utils.mod(r + d, null), null); // 4
-            let { isValid = Ns_D_is_sq; x = s } = Utils.uvRatio(Ns, D); // 5
-            var s_ = Utils.mod(s * r0, null); // 6
-            if (Utils.edIsNegative(s_) == false) s_ := Utils.mod(-s_, null);
-            let s1 = if (Ns_D_is_sq == false) s_ else s; // 7
-            if (Ns_D_is_sq == false) c := r; // 8
-            let Nt = Utils.mod(c * (r - CONST._1n) * CONST.D_MINUS_ONE_SQ - D, null); // 9
-            let s2 = s1 * s1;
-            let W0 = Utils.mod((s1 + s1) * D, null); // 10
-            let W1 = Utils.mod(Nt * CONST.SQRT_AD_MINUS_ONE, null); // 11
-            let W2 = Utils.mod(CONST._1n - s2, null); // 12
-            let W3 = Utils.mod(CONST._1n + s2, null); // 13
-            return C_ExtendedPoint.ExtendedPoint(Utils.mod(W0 * W3, null), Utils.mod(W2 * W1, null), Utils.mod(W1 * W3, null), Utils.mod(W0 * W2, null));
-        };
-
-        /**
-        * Takes uniform output of 64-bit hash function like sha512 and converts it to `RistrettoPoint`.
-        * The hash-to-group operation applies Elligator twice and adds the results.
-        * **Note:** this is one-way map, there is no conversion from point to hash.
-        * https://ristretto.group/formulas/elligator.html
-        * @param hex 64-bit output of a hash function
-        */
-        private func hashToCurve(h: T.Hex): RistrettoPoint {
-            let hex = Utils.ensureBytes(h, ?64);
-            let (firstBytes, secondBytes) = Buffer.split<Nat8>(Buffer.fromArray<Nat8>(hex), 32);
-            let r1 = Utils.bytes255ToNumberLE(Buffer.toArray(firstBytes));
-            let R1 = calcElligatorRistrettoMap(r1);
-            let r2 = Utils.bytes255ToNumberLE(Buffer.toArray(secondBytes));
-            let R2 = calcElligatorRistrettoMap(r2);
-            return RistrettoPoint(R1.add(R2));
-        };
-
-        /**
-        * Converts ristretto-encoded string to ristretto point.
-        * https://ristretto.group/formulas/decoding.html
-        * @param hex Ristretto-encoded 32 bytes. Not every 32-byte string is valid ristretto encoding
-        */
-        private func fromHex(h: T.Hex): RistrettoPoint {
-            let hex = Utils.ensureBytes(h, ?32);
-            let { a; d } = CONST.CURVE;
-            let emsg = "RistrettoPoint.fromHex: the hex is not valid encoding of RistrettoPoint";
-            let s = Utils.bytes255ToNumberLE(hex);
-            // 1. Check that s_bytes is the canonical encoding of a field element, or else abort.
-            // 3. Check that s is non-negative, or else abort
-            if (Utils.equalBytes(Utils.numberTo32BytesLE(s), hex) or Utils.edIsNegative(s) == false) Debug.trap(emsg);
-            let s2 = Utils.mod(s * s, null);
-            let u1 = Utils.mod(CONST._1n + a * s2, null); // 4 (a is -1)
-            let u2 = Utils.mod(CONST._1n - a * s2, null); // 5
-            let u1_2 = Utils.mod(u1 * u1, null);
-            let u2_2 = Utils.mod(u2 * u2, null);
-            let v = Utils.mod(a * d * u1_2 - u2_2, null); // 6
-            let { isValid; x = I } = Utils.invertSqrt(Utils.mod(v * u2_2, null)); // 7
-            let Dx = Utils.mod(I * u2, null); // 8
-            let Dy = Utils.mod(I * Dx * v, null); // 9
-            var x = Utils.mod((s + s) * Dx, null); // 10
-            if (Utils.edIsNegative(x)) x := Utils.mod(-x, null); // 10
-            let y = Utils.mod(u1 * Dy, null); // 11
-            let t = Utils.mod(x * y, null); // 12
-            if (isValid == false or Utils.edIsNegative(t) or y == CONST._0n) Debug.trap(emsg);
-            return RistrettoPoint(C_ExtendedPoint.ExtendedPoint(x, y, CONST._1n, t));
         };
 
         /**
@@ -619,11 +613,11 @@ module C_RistrettoPoint {
             return Utils.numberTo32BytesLE(s); // 11
         };
 
-        private func toHex(): Text {
+        public func toHex(): Text {
             return Utils.bytesToHex(toRawBytes());
         };
 
-        private func toString(): Text {
+        public func toString(): Text {
             return toHex();
         };
 
@@ -693,7 +687,7 @@ module C_Signature {
             return Buffer.toArray(u8);
         };
 
-        func toHex() : Text {
+        public func toHex() : Text {
             return Utils.bytesToHex(toRawBytes());
         };
     }
@@ -833,7 +827,7 @@ module ed25519 {
         return finishVerification(pub, r, sb, hashed);
     };
 
-    func verifySync(sig: T.SigType, message: T.Hex, publicKey: T.PubKey): Bool {
+    public func verifySync(sig: T.SigType, message: T.Hex, publicKey: T.PubKey): Bool {
         let { r; sb; msg; pub } = prepareVerification(sig, message, publicKey);
         // warning : add array [r.toRawBytes(), pub.toRawBytes(), msg]
         let hashed = Utils.sha512s([r.toRawBytes(), pub.toRawBytes(), msg]);
@@ -866,7 +860,7 @@ module ed25519 {
         return (getExtendedPublicKey(privateKey)).pointBytes;
     };
 
-    func getPublicKeySync(privateKey: T.PrivKey): [Nat8] {
+    public func getPublicKeySync(privateKey: T.PrivKey): [Nat8] {
         return getExtendedPublicKeySync(privateKey).pointBytes;
     };
 
@@ -883,7 +877,7 @@ module ed25519 {
         return C_Signature.Signature(R, s).toRawBytes();
     };
 
-    func signSync(messageHex: T.Hex, privateKey: T.Hex): [Nat8] {
+    public func signSync(messageHex: T.Hex, privateKey: T.Hex): [Nat8] {
         let message = Utils.ensureBytes(messageHex, null);
         let { prefix; scalar; pointBytes } = getExtendedPublicKeySync(#hex privateKey);
         // warning : check add array [prefix, message]
