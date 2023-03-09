@@ -6,7 +6,7 @@ module {
     /**
     *   Lib Interface
     */
-    module ED25519 {
+    public module ED25519 {
         /**
         *   Function getPublicKey(private key) -> (public key)
         *   
@@ -39,7 +39,7 @@ module {
         */
     };
 
-    module Utils {
+    public module Utils {
         /**
         *   Function randomPrivateKey() -> (32 bytes)
         *
