@@ -43,19 +43,7 @@ module {
         ep : ExtendedPoint;
     };
 
-    public type Record = {
-        key : Point;
-        value : [ExtendedPoint];
-    };
-
     public type Generator<T> = {
       next : () -> T;
-    };
-
-    public type Log = {
-        id : Nat;
-        action : Text;
-        data : Text;
-        time : Nat;
     };
 }
