@@ -207,16 +207,7 @@ module C_ExtendedPoint {
     public func maplTExPoint2lPoint(lep : [T.ExtendedPoint]) : [ExtendedPoint] {
         Array.map<T.ExtendedPoint, ExtendedPoint>(lep, func a = ExtendedPoint(a.x, a.y, a.z, a.t));
     };
-
-    public func mapPoint2TRecord(p : C_Point.Point, lep : [ExtendedPoint]) : T.Record {
-        let k = p.get();
-        let v = maplPoint2lTExPoint(lep);
-        return {
-            key = k;
-            value = v;
-        };
-    };
-
+    
     public class ExtendedPoint(
                                 xP : Int,
                                 yP : Int,
