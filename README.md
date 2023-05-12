@@ -2,7 +2,12 @@
 
 Motoko implementation of [ed25519](https://en.wikipedia.org/wiki/EdDSA).
 
-The library is a motoko version of  [noble-ed25519](https://github.com/paulmillr/noble-ed25519).
+This library is a porting version of  [noble-ed25519](https://github.com/paulmillr/noble-ed25519).
+
+Dependencies :
+- https://github.com/ZenVoich/fuzz // random byte (create private key)
+- https://github.com/timohanke/motoko-iterext
+- https://github.com/timohanke/motoko-sha2 // sha256 + sha512
 
 ## Usage
 
