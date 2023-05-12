@@ -105,7 +105,7 @@ module Utils {
         let p = Iter.toArray(Iter.map(Text.toIter(hex),
                             func (x: Char) : Nat { Nat32.toNat(Char.toNat32(x)) }));
         var res : [var Nat8] = [var];       
-        for (i in Iter.range(0, 31)) {            
+        for (i in Iter.range(0, p.size() / 2 - 1)) {            
             let a = Option.unwrap<Nat8>(map.get(p[i*2]));
             let b = Option.unwrap<Nat8>(map.get(p[i*2 + 1]));
             let c = 16*a + b;
@@ -339,7 +339,15 @@ module Utils {
             case (#string(h)) hexToBytes(h);
         };
         if (expectedLength != null and ?Array.size(bytes) != expectedLength) {
-            Debug.trap("Expected ${expectedLength} bytes");
+            let errHext = switch hex {
+                case (#array(h)) bytesToHex(h);
+                case (#string(h)) h;
+            };
+            let len = switch (expectedLength) {
+                case null 0;
+                case (?l) l;
+            };
+            Debug.trap(errHext # " - Expected " # Nat.toText(len) # " bytes");
         };
         return bytes;
     };
