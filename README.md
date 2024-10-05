@@ -46,6 +46,10 @@ let signature = Lib.ED25519.sign(message, privateKey);
 let isValid = Lib.ED25519.verify(signature, message, publicKey);
 ```
 
+## Security Considerations
+
+The randomPrivateKey() function is designed based on a simple algorithm using the [fuzz](https://github.com/ZenVoich/fuzz) library to generate random bytes, which does not provide strong cryptographic randomness. Please use an external library if you have high security requirements.
+
 ## Demo
 [(https://github.com/nirvana369/ed25519-demo)](https://github.com/nirvana369/ed25519-demo).
 
